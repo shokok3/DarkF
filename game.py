@@ -20,6 +20,35 @@ hero_name = input()
 print(f"Приветсвую тебя, {hero_name}!")
 print("Ты входишь в лес. Здесь темно и пахнет гилой плотью.")
 print()
+
+# --- Настройка героя ------------------------------
+print("Настройка героя.")
+print("Здоровье, сила, ловкость, воля — по одному числу в строке:")
+health = int(input())
+strength = int(input())
+agility = int(input())
+will = int(input())
+
+# --- Расчёт урона ---------------------------------
+base_attack = 10
+damage = base_attack + strength * 1.5
+crit_damage = damage * 2
+
+# Запас сил героя
+stamina = health // 10 + will
+
+# --- Формуляр героя -------------------------------
+print("Характеристики героя:")
+print(f"Здоровье: {health}")
+print(f"Сила: {strength}")
+print(f"Ловкость: {agility}")
+print(f"Воля: {will}")
+print()
+print(f"Урон героя: {damage:.1f}")
+print(f"Критический урон: {crit_damage:.1f}")
+print(f"Запас сил: {stamina}")
+print()
+
 # --- Меню действий ---------------------------------
 print("Что делаешь?")
 print("1 - осмотреться")
