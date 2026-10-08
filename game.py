@@ -56,6 +56,7 @@ print("2 - идти вперёд")
 print("3 - отдохнуть")
 print("4 - зажечь факел")
 print("5 - Позвать на помощ")
+print("6 - тренировка")
 print()
 
 # --- Выбор героя -----------------------------------
@@ -80,6 +81,36 @@ match choice:
     case "5":
         will = will - 1
         print("Вы позвали на помощь, но в ответ услышали только тишину.")
+
+    case "6":
+        strikes = 6
+        total_damage = 0
+        crit_count = 0
+
+        print("Вы подходите к тренировочному чучелу.")
+        print("Оно стоит здесь среди старых деревьев.")
+        print()
+        print(f"Наносите {strikes} ударов.")
+
+        for i in range(1, strikes + 1):
+            if i % 3 == 0:
+                hit_damage = crit_damage
+                crit_count = crit_count + 1
+                print(f"Удар {i}: {hit_damage:.1f} — критический!")
+            else:
+                hit_damage = damage
+                print(f"Удар {i}: {hit_damage:.1f}")
+
+            total_damage = total_damage + hit_damage
+
+        print()
+        print(f"Итог: {strikes} ударов, критических ударов: {crit_count}")
+        print(f"Общий урон: {total_damage:.1f}")
+
+        average_damage = total_damage / strikes
+        print(f"Средний урон: {average_damage:.1f}")
+
+        stamina = stamina - 4
 
     case _:
         print("Такого действия нет.")
