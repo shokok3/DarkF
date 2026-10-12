@@ -36,6 +36,7 @@ crit_damage = damage * 2
 
 # Запас сил героя
 stamina = health // 10 + will
+max_stamina = stamina
 
 # --- Формуляр героя -------------------------------
 print("Характеристики героя:")
@@ -49,78 +50,117 @@ print(f"Критический урон: {crit_damage:.1f}")
 print(f"Запас сил: {stamina}")
 print()
 
-# --- Меню действий ---------------------------------
-print("Что делаешь?")
-print("1 - осмотреться")
-print("2 - идти вперёд")
-print("3 - отдохнуть")
-print("4 - зажечь факел")
-print("5 - Позвать на помощ")
-print("6 - тренировка")
-print()
+# --- Главный цикл игры -----------------------------
+running = True
+actions = 0
 
-# --- Выбор героя -----------------------------------
-choice = input()
+while running:
+    # --- Меню действий -----------------------------
+    print("Что делаешь?")
+    print("1 - осмотреться")
+    print("2 - идти вперёд")
+    print("3 - отдохнуть")
+    print("4 - зажечь факел")
+    print("5 - Позвать на помощ")
+    print("6 - тренировка")
+    print("0 - выйти из леса")
+    print()
 
-match choice:
-    case "1":
-        print("Вы осмотрелись. Вокруг только тёмные деревья и густой туман.")
+    # --- Защита от неверного ввода ------------------
+    valid = ("0", "1", "2", "3", "4", "5", "6")
+    choice = input()
 
-    case "2":
-        stamina = stamina - 2
-        print("Вы осторожно идёте вперёд. Ветки хрустят под ногами.")
+    while choice not in valid:
+        print("Такого пункта нет. Введи номер пункта из меню.")
+        choice = input()
 
-    case "3":
-        stamina = stamina + 3
-        print("Вы остановились и немного отдохнули.")
+    # --- Выбор героя -------------------------------
+    match choice:
+        case "1":
+            print("Вы осмотрелись. Вокруг только тёмные деревья и густой туман.")
 
-    case "4":
-        stamina = stamina - 1
-        print("Вы зажгли факел. Стало немного светлее.")
+        case "2":
+            cost = 2
 
-    case "5":
-        will = will - 1
-        print("Вы позвали на помощь, но в ответ услышали только тишину.")
-
-    case "6":
-        strikes = 6
-        total_damage = 0
-        crit_count = 0
-
-        print("Вы подходите к тренировочному чучелу.")
-        print("Оно стоит здесь среди старых деревьев.")
-        print()
-        print(f"Наносите {strikes} ударов.")
-
-        for i in range(1, strikes + 1):
-            if i % 3 == 0:
-                hit_damage = crit_damage
-                crit_count = crit_count + 1
-                print(f"Удар {i}: {hit_damage:.1f} — критический!")
+            if stamina >= cost:
+                stamina -= cost
+                print("Вы осторожно идёте вперёд. Ветки хрустят под ногами.")
             else:
-                hit_damage = damage
-                print(f"Удар {i}: {hit_damage:.1f}")
+                health -= cost - stamina
+                stamina = 0
+                print("Сил больше нет — вы идёте на одном упорстве.")
 
-            total_damage = total_damage + hit_damage
+        case "3":
+            stamina += 3
+            if stamina > max_stamina:
+                stamina = max_stamina
+            print("Вы остановились и немного отдохнули.")
 
-        print()
-        print(f"Итог: {strikes} ударов, критических ударов: {crit_count}")
-        print(f"Общий урон: {total_damage:.1f}")
+        case "4":
+            stamina -= 1
+            print("Вы зажгли факел. Стало немного светлее.")
 
-        average_damage = total_damage / strikes
-        print(f"Средний урон: {average_damage:.1f}")
+        case "5":
+            will -= 1
+            print("Вы позвали на помощь, но в ответ услышали только тишину.")
 
-        stamina = stamina - 4
+        case "6":
+            strikes = 6
+            total_damage = 0
+            crit_count = 0
 
-    case _:
-        print("Такого действия нет.")
+            print("Вы подходите к тренировочному чучелу.")
+            print("Оно стоит здесь среди старых деревьев.")
+            print()
+            print(f"Наносите {strikes} ударов.")
 
-print()
-print(f"Здоровье: {health} Запас сил: {stamina}")
+            for i in range(1, strikes + 1):
+                if i % 3 == 0:
+                    hit_damage = crit_damage
+                    crit_count = crit_count + 1
+                    print(f"Удар {i}: {hit_damage:.1f} — критический!")
+                else:
+                    hit_damage = damage
+                    print(f"Удар {i}: {hit_damage:.1f}")
 
-# --- Прощание ---
+                total_damage = total_damage + hit_damage
+
+            print()
+            print(f"Итог: {strikes} ударов, критических ударов: {crit_count}")
+            print(f"Общий урон: {total_damage:.1f}")
+
+            average_damage = total_damage / strikes
+            print(f"Средний урон: {average_damage:.1f}")
+
+            stamina -= 4
+
+        case "0":
+            print("Вы выбираетесь из тёмного леса и возвращаетесь к свету.")
+            running = False
+
+        case _:
+            print("Такого действия нет.")
+
+    # --- Счётчик действий ---------------------------
+    if running:
+        actions += 1
+
+    print()
+    print(f"Здоровье: {health} Запас сил: {stamina}")
+
+    # --- Проверка гибели ----------------------------
+    if health <= 0:
+        print(f"{hero_name} падает без сил. Тёмный лес забирает ещё одного путника.")
+        running = False
+
+# --- Прощание --------------------------------------
 print()
 print(frame)
-print("И так, ты прошл первый этам дальше игра будет интереснее, так держать",hero_name)
+
+if health <= 0:
+    print(f"Ты не выбрался, {hero_name}. Действий совершено: {actions}.")
+else:
+    print(f"Забег окончен, {hero_name}. Действий совершено: {actions}.")
+
 print(frame)
 print()
