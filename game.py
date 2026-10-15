@@ -7,6 +7,9 @@
 # и слушает, что происходит в темноте. Пока
 # пункт только выводится в меню — обрабатывать
 # ================================================
+
+import random
+
 # --- Заголовок ------------------------------------
 title = "ТЕМНЫЙ ЛЕС"
 frame = "=" * 16
@@ -68,10 +71,14 @@ print(f"Критический урон: {crit_damage:.1f}")
 print(f"Запас сил: {stamina}")
 print()
 
+# --- Враги и журнал боя ----------------------------
+enemies = ["волк", "дикий кабан", "лесной упырь", "скелет"]
+log = []
+
 # --- Главный цикл игры -----------------------------
 running = True
 actions = 0
-menu_last = 6
+menu_last = 7
 outcome = "прерывание"
 
 try:
@@ -84,6 +91,7 @@ try:
         print("4 - зажечь факел")
         print("5 - Позвать на помощ")
         print("6 - тренировка")
+        print("7 - исследовать глубины леса")
         print("0 - выйти из леса")
         print()
 
@@ -163,6 +171,81 @@ try:
 
                 stamina -= 4
 
+            case "7":
+                if not enemies:
+                    print("В этой части леса больше не осталось врагов.")
+                else:
+                    enemy = random.choice(enemies)
+                    enemy_hp = 45
+                    round_n = 0
+                    hero_hits = 0
+
+                    print(
+                        f"Ты пробираешься в чащу. "
+                        f"Из темноты появляется {enemy}!"
+                    )
+
+                    while enemy_hp > 0 and health > 0:
+                        round_n += 1
+                        hero_hits += 1
+
+                        if hero_hits % 3 == 0:
+                            hit_damage = crit_damage
+                        else:
+                            hit_damage = damage
+
+                        enemy_hp -= hit_damage
+
+                        if enemy_hp <= 0:
+                            if hero_hits % 3 == 0:
+                                print(
+                                    f"Раунд {round_n}: ты наносишь "
+                                    f"{hit_damage:.1f} урона — "
+                                    "критический удар! Враг повержен."
+                                )
+                            else:
+                                print(
+                                    f"Раунд {round_n}: ты наносишь "
+                                    f"{hit_damage:.1f} урона. "
+                                    "Враг повержен."
+                                )
+
+                            log.append(
+                                f"Раунд {round_n}: герой нанёс "
+                                f"{hit_damage:.1f} урона, "
+                                f"{enemy} повержен"
+                            )
+                            break
+
+                        enemy_damage = random.randint(2, 6)
+                        health -= enemy_damage
+
+                        print(
+                            f"Раунд {round_n}: ты наносишь "
+                            f"{hit_damage:.1f} урона. "
+                            f"Здоровье врага: {enemy_hp:.1f}. "
+                            f"Враг атакует и наносит "
+                            f"{enemy_damage} урона."
+                        )
+
+                        log.append(
+                            f"Раунд {round_n}: герой нанёс "
+                            f"{hit_damage:.1f} урона, "
+                            f"{enemy} нанёс {enemy_damage} урона"
+                        )
+
+                    if enemy_hp <= 0:
+                        enemies.remove(enemy)
+                        print(
+                            f"{enemy.capitalize()} повержен! "
+                            f"Врагов осталось в лесу: {len(enemies)}."
+                        )
+
+                    print(f"Бой окончен. Раундов: {round_n}.")
+
+                    if log:
+                        print(f"Последняя запись боя: {log[-1]}")
+
             case "0":
                 print("Вы выбираетесь из тёмного леса и возвращаетесь к свету.")
                 outcome = "выход"
@@ -176,7 +259,10 @@ try:
             actions += 1
 
         print()
-        print(f"Здоровье: {health} Запас сил: {stamina}")
+        print(
+            f"Здоровье: {health} Запас сил: {stamina} "
+            f"Врагов осталось: {len(enemies)}"
+        )
 
         # --- Проверка гибели ----------------------------
         if health <= 0:
