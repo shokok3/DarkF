@@ -1,15 +1,10 @@
-
 # ================================================
 # ИГРА «ТЕМНЫЙ ЛЕС»
 # Автор: Буслаев Матвей
 # Дата: сентябрь 2026
 #
-# Пункт 4 — «прислушаться»: герой замирает
-# и слушает, что происходит в темноте. Пока
-# пункт только выводится в меню — обрабатывать
-#
-# При равном уроне врага рекорд учитывает первый
-# раунд с максимальным значением благодаря max().
+# Бонус эликсира прибавляется после расчёта критического урона.
+# Каждая штука эликсира увеличивает бонус на 2.
 # ================================================
 
 import random
@@ -64,6 +59,7 @@ damage = base_attack + strength * 1.5
 crit_damage = damage * 2
 
 stamina = health // 10 + will
+max_health = health
 max_stamina = stamina
 
 # --- Формуляр героя -------------------------------
@@ -78,9 +74,11 @@ print(f"Критический урон: {crit_damage:.1f}")
 print(f"Запас сил: {stamina}")
 print()
 
-# --- Враги и журнал боя ----------------------------
+# --- Враги, журнал и золото -----------------------
 enemies = ["волк", "дикий кабан", "лесной упырь", "скелет"]
 log = []
+gold_total = 0
+ability_bonus = 0
 
 
 # --- Функция критического удара --------------------
@@ -95,9 +93,10 @@ def hero_hit(strike_n):
 
 
 # --- Функция боя -----------------------------------
-def fight(enemy, hero_health):
-    """Принимает имя врага и здоровье героя.
-    Возвращает (журнал раундов, победа героя, здоровье после боя).
+def fight(enemy, hero_health, bonus=0):
+    """Проводит бой с врагом; bonus по умолчанию равен 0.
+    Бонус прибавляется после расчёта критического урона.
+    Возвращает (rounds, won, hero_health, loot).
     Печатает ход боя, не изменяет глобальные health и log.
     """
     enemy_hp = 45.0
@@ -113,6 +112,7 @@ def fight(enemy, hero_health):
         round_n += 1
 
         hit, crit = hero_hit(round_n)
+        hit += bonus
         enemy_hp -= hit
 
         if crit:
@@ -140,7 +140,14 @@ def fight(enemy, hero_health):
 
         print(line)
 
-    return rounds, enemy_hp <= 0, hero_health
+    won = enemy_hp <= 0
+
+    if won:
+        loot = 10 + 5 * round_n
+    else:
+        loot = 0
+
+    return rounds, won, hero_health, loot
 
 
 # --- Функция таблицы лидеров -----------------------
@@ -189,10 +196,24 @@ def print_run_summary(log):
         print("За этот забег боёв не было.")
 
 
+# --- Функция покупки -------------------------------
+def buy(price, gold, quantity=1):
+    """Покупает quantity товаров по цене price.
+    quantity по умолчанию равен 1.
+    Возвращает (gold_left, ok), ничего не печатает.
+    """
+    cost = price * quantity
+
+    if gold >= cost:
+        return gold - cost, True
+
+    return gold, False
+
+
 # --- Главный цикл игры -----------------------------
 running = True
 actions = 0
-menu_last = 8
+menu_last = 9
 outcome = "прерывание"
 
 try:
@@ -207,6 +228,7 @@ try:
         print("6 - тренировка")
         print("7 - исследовать глубины леса")
         print("8 - таблица лидеров")
+        print("9 - магазин умений")
         print("0 - выйти из леса")
         print()
 
@@ -315,22 +337,78 @@ try:
                 else:
                     enemy = random.choice(enemies)
 
-                    rounds, won, health = fight(enemy, health)
+                    rounds, won, health, loot = fight(
+                        enemy, health, bonus=ability_bonus
+                    )
 
                     for r in rounds:
                         log.append(r)
 
                     if won:
+                        gold_total += loot
                         enemies.remove(enemy)
+
                         print(
                             f"{enemy.capitalize()} повержен! "
-                            f"Врагов осталось в лесу: {len(enemies)}."
+                            f"Врагов осталось в лесу: {len(enemies)}. "
+                            f"Добыча: {loot} золота."
                         )
 
                     print(f"Бой окончен. Раундов: {len(rounds)}.")
 
             case "8":
                 print_leaderboard(log)
+
+            case "9":
+                print("Магазин:")
+                print("1 - зелье (+10 здоровья): 10 золота")
+                print("2 - масло для факела (+5 запаса сил): 15 золота")
+                print("3 - боевой эликсир (+2 к урону на весь забег): 40 золота")
+                print("Номер товара (0 — ничего не покупать):")
+
+                item = input()
+                prices = (10, 15, 40)
+                names = ("зелье", "масло для факела", "боевой эликсир")
+
+                if item in ("1", "2", "3"):
+                    price = prices[int(item) - 1]
+                    name = names[int(item) - 1]
+
+                    print("Количество (Enter — одна штука):")
+                    qty_line = input()
+
+                    if qty_line == "":
+                        qty = 1
+                        gold_total, ok = buy(price, gold_total)
+                    else:
+                        qty = int(qty_line)
+                        gold_total, ok = buy(
+                            price, gold_total, quantity=qty
+                        )
+
+                    if ok:
+                        if item == "1":
+                            health = min(health + 10 * qty, max_health)
+                        elif item == "2":
+                            stamina = min(
+                                stamina + 5 * qty, max_stamina
+                            )
+                        else:
+                            ability_bonus += 2 * qty
+
+                        print(
+                            f"Куплено: {qty} шт. — {name}, "
+                            f"цена {price * qty} золота. "
+                            f"Осталось золота: {gold_total}."
+                        )
+                    else:
+                        print(
+                            f"Недостаточно золота: нужно {price * qty}, "
+                            f"есть {gold_total}."
+                        )
+
+                elif item != "0":
+                    print("Такого товара в магазине нет.")
 
             case "0":
                 print(
@@ -350,7 +428,7 @@ try:
         print()
         print(
             f"Здоровье: {health} Запас сил: {stamina} "
-            f"Врагов осталось: {len(enemies)}"
+            f"Врагов осталось: {len(enemies)} Золото: {gold_total}"
         )
 
         # --- Проверка гибели ----------------------------
