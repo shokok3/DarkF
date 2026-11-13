@@ -74,11 +74,27 @@ print(f"Критический урон: {crit_damage:.1f}")
 print(f"Запас сил: {stamina}")
 print()
 
-# --- Враги, журнал и золото -----------------------
+# --- Враги, журнал, золото и инвентарь -------------
 enemies = ["волк", "дикий кабан", "лесной упырь", "скелет"]
+
+enemy_stats = {
+    "волк": {"hp": 45, "damage": 3, "loot": 10},
+    "дикий кабан": {"hp": 45, "damage": 5, "loot": 20},
+    "лесной упырь": {"hp": 30, "damage": 4, "loot": 15},
+    "скелет": {"hp": 45, "damage": 6, "loot": 25},
+}
+
 log = []
 gold_total = 0
 ability_bonus = 0
+
+prices = {
+    "potion": 10,
+    "torch_oil": 15,
+    "war_elixir": 40
+}
+
+inventory = {}
 
 
 # --- Функция критического удара --------------------
@@ -94,12 +110,14 @@ def hero_hit(strike_n):
 
 # --- Функция боя -----------------------------------
 def fight(enemy, hero_health, bonus=0):
-    """Проводит бой с врагом; bonus по умолчанию равен 0.
+    """Бой с enemy до гибели одного из двоих.
+    Карточка врага берётся из enemy_stats по имени: нужны ключи
+    hp, damage, loot. Печатает строки раундов.
     Бонус прибавляется после расчёта критического урона.
     Возвращает (rounds, won, hero_health, loot).
-    Печатает ход боя, не изменяет глобальные health и log.
     """
-    enemy_hp = 45.0
+    stats = enemy_stats[enemy]
+    enemy_hp = float(stats["hp"])
     rounds = []
     round_n = 0
 
@@ -127,7 +145,7 @@ def fight(enemy, hero_health, bonus=0):
             line += " Враг повержен."
             rounds.append([round_n, hit, 0])
         else:
-            blow = random.randint(2, 6)
+            blow = stats["damage"]
             hero_health -= blow
 
             line += (
@@ -141,11 +159,7 @@ def fight(enemy, hero_health, bonus=0):
         print(line)
 
     won = enemy_hp <= 0
-
-    if won:
-        loot = 10 + 5 * round_n
-    else:
-        loot = 0
+    loot = stats["loot"] if won else 0
 
     return rounds, won, hero_health, loot
 
@@ -213,7 +227,7 @@ def buy(price, gold, quantity=1):
 # --- Главный цикл игры -----------------------------
 running = True
 actions = 0
-menu_last = 9
+menu_last = 11
 outcome = "прерывание"
 
 try:
@@ -229,6 +243,8 @@ try:
         print("7 - исследовать глубины леса")
         print("8 - таблица лидеров")
         print("9 - магазин умений")
+        print("10 - рюкзак")
+        print("11 - выпить зелье")
         print("0 - выйти из леса")
         print()
 
@@ -361,54 +377,68 @@ try:
 
             case "9":
                 print("Магазин:")
-                print("1 - зелье (+10 здоровья): 10 золота")
-                print("2 - масло для факела (+5 запаса сил): 15 золота")
-                print("3 - боевой эликсир (+2 к урону на весь забег): 40 золота")
-                print("Номер товара (0 — ничего не покупать):")
 
-                item = input()
-                prices = (10, 15, 40)
-                names = ("зелье", "масло для факела", "боевой эликсир")
+                for name, price in prices.items():
+                    print(f"{name}: {price} золота")
 
-                if item in ("1", "2", "3"):
-                    price = prices[int(item) - 1]
-                    name = names[int(item) - 1]
+                print("Название предмета (пустая строка — ничего не покупать):")
+                name = input()
 
-                    print("Количество (Enter — одна штука):")
-                    qty_line = input()
+                if name != "":
+                    if name in prices:
+                        price = prices[name]
 
-                    if qty_line == "":
-                        qty = 1
-                        gold_total, ok = buy(price, gold_total)
-                    else:
-                        qty = int(qty_line)
-                        gold_total, ok = buy(
-                            price, gold_total, quantity=qty
-                        )
+                        print("Количество (Enter — одна штука):")
+                        qty_line = input()
 
-                    if ok:
-                        if item == "1":
-                            health = min(health + 10 * qty, max_health)
-                        elif item == "2":
-                            stamina = min(
-                                stamina + 5 * qty, max_stamina
+                        if qty_line == "":
+                            qty = 1
+                            gold_total, ok = buy(price, gold_total)
+                        else:
+                            qty = int(qty_line)
+                            gold_total, ok = buy(
+                                price, gold_total, quantity=qty
+                            )
+
+                        if ok:
+                            inventory[name] = inventory.get(name, 0) + qty
+
+                            print(
+                                f"Куплено {qty} {name} "
+                                f"за {price * qty} золота. "
+                                f"Осталось золота: {gold_total}."
                             )
                         else:
-                            ability_bonus += 2 * qty
-
-                        print(
-                            f"Куплено: {qty} шт. — {name}, "
-                            f"цена {price * qty} золота. "
-                            f"Осталось золота: {gold_total}."
-                        )
+                            print(
+                                f"Недостаточно золота: нужно "
+                                f"{price * qty}, есть {gold_total}."
+                            )
                     else:
-                        print(
-                            f"Недостаточно золота: нужно {price * qty}, "
-                            f"есть {gold_total}."
-                        )
+                        print("Такого предмета в магазине нет.")
 
-                elif item != "0":
-                    print("Такого товара в магазине нет.")
+            case "10":
+                if not inventory:
+                    print("Рюкзак пуст.")
+                else:
+                    print("Рюкзак:")
+
+                    for name, qty in inventory.items():
+                        print(f"{name}: {qty} шт.")
+
+            case "11":
+                if inventory.get("potion", 0) == 0:
+                    print("В рюкзаке нет зелий.")
+                else:
+                    health = min(health + 10, max_health)
+                    inventory["potion"] -= 1
+
+                    if inventory["potion"] == 0:
+                        del inventory["potion"]
+
+                    print(
+                        f"Ты выпил зелье. Здоровье: {health}. "
+                        f"Зелий осталось: {inventory.get('potion', 0)}."
+                    )
 
             case "0":
                 print(
@@ -464,6 +494,13 @@ finally:
             f"Путешествие прервано, {hero_name}. "
             f"Действий совершено: {actions}."
         )
+
+    if inventory:
+        print("Оставшиеся предметы в рюкзаке:")
+        for name, qty in inventory.items():
+            print(f"{name}: {qty} шт.")
+    else:
+        print("В рюкзаке ничего не осталось.")
 
     print_run_summary(log)
 
