@@ -98,6 +98,40 @@ prices = {
 inventory = {}
 
 
+# --- Карта леса ------------------------------------
+MAP = [
+    ["#", "#", "#", "#", "#"],
+    ["#", ".", ".", "#", "#"],
+    ["#", ".", "#", ".", "#"],
+    ["#", ".", ".", ".", "#"],
+    ["#", "#", "S", ".", "#"],
+]
+
+# Позиция героя: строка и столбец стартовой клетки
+hero_r, hero_c = 4, 2
+
+# Множество посещённых комнат
+visited = {(4, 2)}
+
+# Уникальный лут в комнатах
+LOOT = {
+    (1, 1): "древняя монета",
+    (2, 1): "пыльное зелье",
+    (3, 3): "драгоценный камень стража"
+}
+
+# Множество уже найденных предметов
+found_loot = set()
+
+# Направления движения
+DIRECTIONS = {
+    "север": (-1, 0),
+    "юг": (1, 0),
+    "запад": (0, -1),
+    "восток": (0, 1)
+}
+
+
 # --- Функция критического удара --------------------
 def hero_hit(strike_n):
     """Принимает номер удара.
@@ -225,42 +259,80 @@ def buy(price, gold, quantity=1):
     return gold, False
 
 
+# --- Функция разведки карты ------------------------
+def scout(r, c, seen):
+    """Рекурсивно считает количество доступных комнат."""
+
+    # Проверяем, не вышли ли координаты за границы карты
+    if r < 0 or r >= len(MAP) or c < 0 or c >= len(MAP[r]):
+        return 0
+
+    # Проверяем, посещали ли комнату и не является ли она стеной
+    if (r, c) in seen or MAP[r][c] == "#":
+        return 0
+
+    seen.add((r, c))
+    total = 1
+
+    for dr, dc in DIRECTIONS.values():
+        total += scout(r + dr, c + dc, seen)
+
+    return total
+
+
 # --- Команды и меню --------------------------------
 commands = [
-    "look", "go", "rest", "listen", "torch", "train",
-    "descend", "leaders", "shop", "backpack",
-    "drink зелье", "buy <предмет> [количество]", "exit"
+    "осмотреться",
+    "идти [север/юг/запад/восток]",
+    "отдохнуть",
+    "прислушаться",
+    "зажечь факел",
+    "тренировка",
+    "исследовать глубины леса",
+    "таблица лидеров",
+    "магазин",
+    "рюкзак",
+    "выпить зелье",
+    "купить <предмет> [количество]",
+    "карта",
+    "разведка",
+    "помощь",
+    "выйти"
 ]
 
 MENU = [
-    "Что делаешь? (номер или команда; help — помощь)",
-    "1 - осмотреться (look)",
-    "2 - идти вперёд (go)",
-    "3 - отдохнуть (rest)",
-    "4 - прислушаться (listen)",
-    "5 - зажечь факел (torch)",
-    "6 - тренировка (train)",
-    "7 - исследовать глубины леса (descend)",
-    "8 - таблица лидеров (leaders)",
-    "9 - магазин (shop)",
-    "10 - рюкзак (backpack)",
-    "11 - выпить зелье (drink)",
-    "0 - выйти из леса (exit)"
+    "Что делаешь? (номер или команда; помощь — справка)",
+    "1 - осмотреться",
+    "2 - идти вперёд или указать направление",
+    "3 - отдохнуть",
+    "4 - прислушаться",
+    "5 - зажечь факел",
+    "6 - тренировка",
+    "7 - исследовать глубины леса",
+    "8 - таблица лидеров",
+    "9 - магазин",
+    "10 - рюкзак",
+    "11 - выпить зелье",
+    "12 - показать карту",
+    "13 - разведать доступные комнаты",
+    "0 - выйти из леса"
 ]
 
 num_to_verb = {
-    "1": "look",
-    "2": "go",
-    "3": "rest",
-    "4": "listen",
-    "5": "torch",
-    "6": "train",
-    "7": "descend",
-    "8": "leaders",
-    "9": "shop",
-    "10": "backpack",
-    "11": "drink",
-    "0": "exit"
+    "1": "осмотреться",
+    "2": "идти",
+    "3": "отдохнуть",
+    "4": "прислушаться",
+    "5": "факел",
+    "6": "тренировка",
+    "7": "исследовать",
+    "8": "лидеры",
+    "9": "магазин",
+    "10": "рюкзак",
+    "11": "выпить",
+    "12": "карта",
+    "13": "разведка",
+    "0": "выйти"
 }
 
 
@@ -292,30 +364,63 @@ try:
 
         # --- Выбор героя -------------------------------
         match verb:
-            case "look":
+            case "осмотреться":
                 print(
                     "Вы осмотрелись. Вокруг только тёмные "
                     "деревья и густой туман."
                 )
 
-            case "go":
-                cost = 2
+            case "идти":
+                if len(words) > 1 and words[1] in DIRECTIONS:
+                    dr, dc = DIRECTIONS[words[1]]
+                    nr, nc = hero_r + dr, hero_c + dc
 
-                if stamina >= cost:
-                    stamina -= cost
-                    print(
-                        "Вы осторожно идёте вперёд. "
-                        "Ветки хрустят под ногами."
-                    )
+                    if (
+                        0 <= nr < len(MAP)
+                        and 0 <= nc < len(MAP[nr])
+                        and MAP[nr][nc] != "#"
+                    ):
+                        hero_r, hero_c = nr, nc
+                        visited.add((hero_r, hero_c))
+
+                        if (hero_r, hero_c) in LOOT:
+                            item = LOOT[(hero_r, hero_c)]
+
+                            if item not in found_loot:
+                                found_loot.add(item)
+                                print(
+                                    f"Вы нашли предмет: {item}! "
+                                    f"Уникальных находок: {len(found_loot)}."
+                                )
+
+                        print(
+                            f"Вы идёте на {words[1]}. "
+                            f"Комната ({hero_r}, {hero_c})."
+                        )
+                    else:
+                        print(
+                            f"Нельзя идти на {words[1]}: "
+                            "там стена или край карты."
+                        )
+
                 else:
-                    health -= cost - stamina
-                    stamina = 0
-                    print(
-                        "Сил больше нет — вы идёте "
-                        "на одном упорстве."
-                    )
+                    cost = 2
 
-            case "rest":
+                    if stamina >= cost:
+                        stamina -= cost
+                        print(
+                            "Вы осторожно идёте вперёд. "
+                            "Ветки хрустят под ногами."
+                        )
+                    else:
+                        health -= cost - stamina
+                        stamina = 0
+                        print(
+                            "Сил больше нет — вы идёте "
+                            "на одном упорстве."
+                        )
+
+            case "отдохнуть":
                 stamina += 3
 
                 if stamina > max_stamina:
@@ -323,17 +428,17 @@ try:
 
                 print("Вы остановились и немного отдохнули.")
 
-            case "listen":
+            case "прислушаться":
                 print(
                     "Вы прислушались. В глубине леса "
                     "слышится странный шорох."
                 )
 
-            case "torch":
+            case "факел":
                 stamina -= 1
                 print("Вы зажгли факел. Стало немного светлее.")
 
-            case "train":
+            case "тренировка":
                 strikes = 6
                 total_damage = 0
                 crit_count = 0
@@ -369,7 +474,7 @@ try:
 
                 stamina -= 4
 
-            case "descend":
+            case "исследовать":
                 if not enemies:
                     print(
                         "В этой части леса больше "
@@ -397,19 +502,19 @@ try:
 
                     print(f"Бой окончен. Раундов: {len(rounds)}.")
 
-            case "leaders":
+            case "лидеры":
                 print_leaderboard(log)
 
-            case "shop":
+            case "магазин":
                 print("Магазин:")
 
                 for name, price in prices.items():
                     print(f"{name.capitalize()}: {price} золота")
 
                 print(f"У тебя {gold_total} золота.")
-                print("Для покупки введи: buy название предмета количество")
+                print("Для покупки введи: купить название предмета количество")
 
-            case "buy":
+            case "купить":
                 if len(words) > 1 and words[-1].isdigit():
                     qty = int(words[-1])
                     item = " ".join(words[1:-1])
@@ -418,7 +523,7 @@ try:
                     item = " ".join(words[1:])
 
                 if item == "":
-                    print("Что купить? Введи: buy <предмет>.")
+                    print("Что купить? Введи: купить <предмет>.")
                     continue
 
                 if item not in prices:
@@ -449,7 +554,7 @@ try:
                     )
                     continue
 
-            case "backpack":
+            case "рюкзак":
                 if not inventory:
                     print("Рюкзак пуст.")
                 else:
@@ -458,7 +563,7 @@ try:
                     for name, qty in inventory.items():
                         print(f"{name.capitalize()}: {qty} шт.")
 
-            case "drink":
+            case "выпить":
                 item = " ".join(words[1:]) or "зелье"
 
                 if inventory.get(item, 0) == 0:
@@ -472,15 +577,38 @@ try:
                         del inventory[item]
 
                     print(
-                        f"Ты выпил предмет «{item}». Здоровье: {health}. "
+                        f"Вы выпили предмет «{item}». Здоровье: {health}. "
                         f"Осталось: {inventory.get(item, 0)} шт."
                     )
 
-            case "help":
-                print("Команды: " + ", ".join(commands) + ".")
-                print("Номера от 0 до 11 тоже работают.")
+            case "карта":
+                print("Карта леса:")
 
-            case "exit":
+                for i in range(len(MAP)):
+                    cells = []
+
+                    for j in range(len(MAP[i])):
+                        cell = (
+                            "@"
+                            if (i, j) == (hero_r, hero_c)
+                            else MAP[i][j]
+                        )
+                        cells.append(cell)
+
+                    print(" ".join(cells))
+
+            case "разведка":
+                seen = set()
+                total_rooms = scout(hero_r, hero_c, seen)
+                print(
+                    f"Разведка: доступно комнат — {total_rooms}."
+                )
+
+            case "помощь":
+                print("Команды: " + ", ".join(commands) + ".")
+                print("Номера от 0 до 13 тоже работают.")
+
+            case "выйти":
                 print(
                     "Вы выбираетесь из тёмного леса "
                     "и возвращаетесь к свету."
@@ -491,7 +619,7 @@ try:
             case _:
                 print(
                     f"Не понимаю команду: '{line.strip()}'. "
-                    "Введи 'help' для справки."
+                    "Введи 'помощь' для справки."
                 )
                 continue
 
