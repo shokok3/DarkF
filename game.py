@@ -1,3 +1,4 @@
+
 # ================================================
 # ИГРА «ТЕМНЫЙ ЛЕС»
 # Автор: Буслаев Матвей
@@ -89,9 +90,9 @@ gold_total = 0
 ability_bonus = 0
 
 prices = {
-    "potion": 10,
-    "torch_oil": 15,
-    "war_elixir": 40
+    "зелье": 10,
+    "масло для факела": 15,
+    "боевой эликсир": 40
 }
 
 inventory = {}
@@ -224,55 +225,80 @@ def buy(price, gold, quantity=1):
     return gold, False
 
 
+# --- Команды и меню --------------------------------
+commands = [
+    "look", "go", "rest", "listen", "torch", "train",
+    "descend", "leaders", "shop", "backpack",
+    "drink зелье", "buy <предмет> [количество]", "exit"
+]
+
+MENU = [
+    "Что делаешь? (номер или команда; help — помощь)",
+    "1 - осмотреться (look)",
+    "2 - идти вперёд (go)",
+    "3 - отдохнуть (rest)",
+    "4 - прислушаться (listen)",
+    "5 - зажечь факел (torch)",
+    "6 - тренировка (train)",
+    "7 - исследовать глубины леса (descend)",
+    "8 - таблица лидеров (leaders)",
+    "9 - магазин (shop)",
+    "10 - рюкзак (backpack)",
+    "11 - выпить зелье (drink)",
+    "0 - выйти из леса (exit)"
+]
+
+num_to_verb = {
+    "1": "look",
+    "2": "go",
+    "3": "rest",
+    "4": "listen",
+    "5": "torch",
+    "6": "train",
+    "7": "descend",
+    "8": "leaders",
+    "9": "shop",
+    "10": "backpack",
+    "11": "drink",
+    "0": "exit"
+}
+
+
 # --- Главный цикл игры -----------------------------
 running = True
 actions = 0
-menu_last = 11
 outcome = "прерывание"
 
 try:
     while running:
         # --- Меню действий -----------------------------
-        print("Что делаешь?")
-        print("1 - осмотреться")
-        print("2 - идти вперёд")
-        print("3 - отдохнуть")
-        print("4 - зажечь факел")
-        print("5 - Позвать на помощ")
-        print("6 - тренировка")
-        print("7 - исследовать глубины леса")
-        print("8 - таблица лидеров")
-        print("9 - магазин умений")
-        print("10 - рюкзак")
-        print("11 - выпить зелье")
-        print("0 - выйти из леса")
+        print("\n".join(MENU))
         print()
 
-        # --- Защита от неверного ввода ------------------
-        while True:
-            choice = input()
+        # --- Чтение и обработка команды -----------------
+        line = input()
+        cmd = line.strip().lower()
 
-            try:
-                menu_number = int(choice)
-            except ValueError:
-                print("Такого пункта нет. Введи номер пункта из меню.")
-                continue
+        while cmd == "":
+            print("Пустая команда. Введи команду или номер.")
+            line = input()
+            cmd = line.strip().lower()
 
-            if 0 <= menu_number <= menu_last:
-                choice = str(menu_number)
-                break
+        words = cmd.split()
+        verb = words[0]
 
-            print("Такого пункта нет. Введи номер пункта из меню.")
+        if cmd in num_to_verb:
+            verb = num_to_verb[cmd]
 
         # --- Выбор героя -------------------------------
-        match choice:
-            case "1":
+        match verb:
+            case "look":
                 print(
                     "Вы осмотрелись. Вокруг только тёмные "
                     "деревья и густой туман."
                 )
 
-            case "2":
+            case "go":
                 cost = 2
 
                 if stamina >= cost:
@@ -289,7 +315,7 @@ try:
                         "на одном упорстве."
                     )
 
-            case "3":
+            case "rest":
                 stamina += 3
 
                 if stamina > max_stamina:
@@ -297,18 +323,17 @@ try:
 
                 print("Вы остановились и немного отдохнули.")
 
-            case "4":
+            case "listen":
+                print(
+                    "Вы прислушались. В глубине леса "
+                    "слышится странный шорох."
+                )
+
+            case "torch":
                 stamina -= 1
                 print("Вы зажгли факел. Стало немного светлее.")
 
-            case "5":
-                will -= 1
-                print(
-                    "Вы позвали на помощь, "
-                    "но в ответ услышали только тишину."
-                )
-
-            case "6":
+            case "train":
                 strikes = 6
                 total_damage = 0
                 crit_count = 0
@@ -344,7 +369,7 @@ try:
 
                 stamina -= 4
 
-            case "7":
+            case "descend":
                 if not enemies:
                     print(
                         "В этой части леса больше "
@@ -372,75 +397,90 @@ try:
 
                     print(f"Бой окончен. Раундов: {len(rounds)}.")
 
-            case "8":
+            case "leaders":
                 print_leaderboard(log)
 
-            case "9":
+            case "shop":
                 print("Магазин:")
 
                 for name, price in prices.items():
-                    print(f"{name}: {price} золота")
+                    print(f"{name.capitalize()}: {price} золота")
 
-                print("Название предмета (пустая строка — ничего не покупать):")
-                name = input()
+                print(f"У тебя {gold_total} золота.")
+                print("Для покупки введи: buy название предмета количество")
 
-                if name != "":
-                    if name in prices:
-                        price = prices[name]
+            case "buy":
+                if len(words) > 1 and words[-1].isdigit():
+                    qty = int(words[-1])
+                    item = " ".join(words[1:-1])
+                else:
+                    qty = 1
+                    item = " ".join(words[1:])
 
-                        print("Количество (Enter — одна штука):")
-                        qty_line = input()
+                if item == "":
+                    print("Что купить? Введи: buy <предмет>.")
+                    continue
 
-                        if qty_line == "":
-                            qty = 1
-                            gold_total, ok = buy(price, gold_total)
-                        else:
-                            qty = int(qty_line)
-                            gold_total, ok = buy(
-                                price, gold_total, quantity=qty
-                            )
+                if item not in prices:
+                    print("Такого предмета в магазине нет.")
+                    continue
 
-                        if ok:
-                            inventory[name] = inventory.get(name, 0) + qty
+                if qty <= 0:
+                    print("Количество должно быть больше нуля.")
+                    continue
 
-                            print(
-                                f"Куплено {qty} {name} "
-                                f"за {price * qty} золота. "
-                                f"Осталось золота: {gold_total}."
-                            )
-                        else:
-                            print(
-                                f"Недостаточно золота: нужно "
-                                f"{price * qty}, есть {gold_total}."
-                            )
-                    else:
-                        print("Такого предмета в магазине нет.")
+                price = prices[item]
+                gold_total, ok = buy(
+                    price, gold_total, quantity=qty
+                )
 
-            case "10":
+                if ok:
+                    inventory[item] = inventory.get(item, 0) + qty
+
+                    print(
+                        f"Куплено {qty} шт. предмета «{item}» "
+                        f"за {price * qty} золота. "
+                        f"Осталось золота: {gold_total}."
+                    )
+                else:
+                    print(
+                        f"Недостаточно золота: нужно "
+                        f"{price * qty}, есть {gold_total}."
+                    )
+                    continue
+
+            case "backpack":
                 if not inventory:
                     print("Рюкзак пуст.")
                 else:
                     print("Рюкзак:")
 
                     for name, qty in inventory.items():
-                        print(f"{name}: {qty} шт.")
+                        print(f"{name.capitalize()}: {qty} шт.")
 
-            case "11":
-                if inventory.get("potion", 0) == 0:
-                    print("В рюкзаке нет зелий.")
+            case "drink":
+                item = " ".join(words[1:]) or "зелье"
+
+                if inventory.get(item, 0) == 0:
+                    print(f"В рюкзаке нет предмета «{item}».")
+                    continue
                 else:
                     health = min(health + 10, max_health)
-                    inventory["potion"] -= 1
+                    inventory[item] -= 1
 
-                    if inventory["potion"] == 0:
-                        del inventory["potion"]
+                    if inventory[item] == 0:
+                        del inventory[item]
 
                     print(
-                        f"Ты выпил зелье. Здоровье: {health}. "
-                        f"Зелий осталось: {inventory.get('potion', 0)}."
+                        f"Ты выпил предмет «{item}». Здоровье: {health}. "
+                        f"Осталось: {inventory.get(item, 0)} шт."
                     )
 
-            case "0":
+            case "help":
+                print("Команды: " + ", ".join(commands) + ".")
+                print("Номера от 0 до 11 тоже работают.")
+
+            case "exit":
                 print(
                     "Вы выбираетесь из тёмного леса "
                     "и возвращаетесь к свету."
@@ -449,7 +489,11 @@ try:
                 running = False
 
             case _:
-                print("Такого действия нет.")
+                print(
+                    f"Не понимаю команду: '{line.strip()}'. "
+                    "Введи 'help' для справки."
+                )
+                continue
 
         # --- Счётчик действий ---------------------------
         if running:
@@ -498,7 +542,7 @@ finally:
     if inventory:
         print("Оставшиеся предметы в рюкзаке:")
         for name, qty in inventory.items():
-            print(f"{name}: {qty} шт.")
+            print(f"{name.capitalize()}: {qty} шт.")
     else:
         print("В рюкзаке ничего не осталось.")
 
